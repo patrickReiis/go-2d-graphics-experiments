@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/patrickReiis/go-2d-graphics-experiments/animation"
+	"github.com/patrickReiis/go-2d-graphics-experiments/games"
 )
 
 func main() {
-	animation.Hello()
+	games.PlayerWalkingWithAnimation()
 }
