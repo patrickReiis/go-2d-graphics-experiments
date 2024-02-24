@@ -27,6 +27,7 @@ type LivingEntity struct {
 type Player struct {
 	LivingEntity
 	Animation
+	money int
 }
 
 type Animation struct {
