@@ -1,9 +1,20 @@
 package main
 
 import (
-	"github.com/patrickReiis/go-2d-graphics-experiments/games"
+	"time"
+
+	"github.com/patrickReiis/go-2d-graphics-experiments/multiplayer"
 )
 
 func main() {
-	games.PlayerWalkingWithAnimation()
+
+	go multiplayer.ListenForConnections()
+
+	time.Sleep(2 * time.Second)
+
+	go multiplayer.EstablishConn()
+
+	select {}
+
+	//games.PlayerWalkingWithAnimation()
 }
