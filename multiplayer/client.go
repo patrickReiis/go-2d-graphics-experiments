@@ -1,12 +1,13 @@
 package multiplayer
 
 import (
-	"fmt"
 	"log"
 	"net"
+
+	"github.com/patrickReiis/go-2d-graphics-experiments/games"
 )
 
-func EstablishConn() {
+func EstablishConn(playerId int) {
 	udpServer, err := net.ResolveUDPAddr("udp", ":1053")
 
 	if err != nil {
@@ -18,18 +19,26 @@ func EstablishConn() {
 		log.Fatalf("Listen failed: %s", err.Error())
 	}
 	// close the connection
-	//defer conn.Close()
+	defer conn.Close()
+	//	received := make([]byte, 1024)
+	//	_, err = conn.Read(received)
+	//	if err != nil {
+	//		log.Fatal("error reading, cliet game loop")
+	//	}
 
-	_, err = conn.Write([]byte("hello from the other side of the world"))
-	if err != nil {
-		log.Fatalf("Write data failed: %s", err.Error())
-	}
+	games.PlayerWalkingWithAnimation(conn, playerId)
 
-	received := make([]byte, 1024)
-	_, err = conn.Read(received)
-	if err != nil {
-		log.Fatalf("Read data failed: %s", err.Error())
-	}
+	//	_, err = conn.Write([]byte("hello first"))
+	//	if err != nil {
+	//		log.Fatalf("Write data failed: %s", err.Error())
+	//	}
+	//
+	//	received := make([]byte, 1024)
+	//	_, err = conn.Read(received)
+	//	if err != nil {
+	//		log.Fatalf("Read data failed: %s", err.Error())
+	//	}
+	//
+	//	fmt.Println("client: " + string(received))
 
-	fmt.Println(string(received))
 }

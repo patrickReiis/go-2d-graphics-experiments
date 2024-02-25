@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 )
 
 func ListenForConnections() {
@@ -13,6 +12,9 @@ func ListenForConnections() {
 		log.Fatal(err)
 	}
 	defer udpServer.Close()
+
+	var players []string
+	fmt.Println(players)
 
 	for {
 		buf := make([]byte, 1024)
@@ -24,12 +26,25 @@ func ListenForConnections() {
 		go udpResponse(udpServer, addr, buf)
 
 		fmt.Println(addr)
+		fmt.Println("nothing...")
 	}
 }
 
 func udpResponse(udpServer net.PacketConn, addr net.Addr, buf []byte) {
-	time := time.Now().Format(time.ANSIC)
-	responseStr := fmt.Sprintf("time received: %v. Your message: %v!", time, string(buf))
+	if string(buf)[:2] == "id" {
+	}
 
-	udpServer.WriteTo([]byte(responseStr), addr)
+	responseStr := fmt.Sprintf("%v", string(buf))
+
+	_, err := udpServer.WriteTo([]byte("hello from server, first"), addr)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	_, err = udpServer.WriteTo([]byte("hello from server, second"), addr)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("server: " + responseStr)
 }
