@@ -20,25 +20,6 @@ func EstablishConn(playerId int) {
 	}
 	// close the connection
 	defer conn.Close()
-	//	received := make([]byte, 1024)
-	//	_, err = conn.Read(received)
-	//	if err != nil {
-	//		log.Fatal("error reading, cliet game loop")
-	//	}
 
 	games.PlayerWalkingWithAnimation(conn, playerId)
-
-	//	_, err = conn.Write([]byte("hello first"))
-	//	if err != nil {
-	//		log.Fatalf("Write data failed: %s", err.Error())
-	//	}
-	//
-	//	received := make([]byte, 1024)
-	//	_, err = conn.Read(received)
-	//	if err != nil {
-	//		log.Fatalf("Read data failed: %s", err.Error())
-	//	}
-	//
-	//	fmt.Println("client: " + string(received))
-
 }
