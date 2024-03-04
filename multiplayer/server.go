@@ -1,10 +1,14 @@
 package multiplayer
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"net"
+
+	"github.com/patrickReiis/go-2d-graphics-experiments/games"
 )
+
+var Players []games.PlayerJson
 
 func ListenForConnections() {
 	udpServer, err := net.ListenPacket("udp", ":1053")
@@ -13,38 +17,80 @@ func ListenForConnections() {
 	}
 	defer udpServer.Close()
 
-	var players []string
-	fmt.Println(players)
-
 	for {
 		buf := make([]byte, 1024)
-		_, addr, err := udpServer.ReadFrom(buf)
+		n, addr, err := udpServer.ReadFrom(buf)
 		if err != nil {
 			log.Print(err)
 		}
 
-		go udpResponse(udpServer, addr, buf)
+		go udpResponse(udpServer, addr, buf[:n])
 
-		fmt.Println(addr)
-		fmt.Println("nothing...")
 	}
 }
 
 func udpResponse(udpServer net.PacketConn, addr net.Addr, buf []byte) {
-	if string(buf)[:2] == "id" {
+	if string(buf) == "[]" {
+		err := sendAllPlayersToClient(udpServer, addr)
+		if err != nil {
+			log.Print(err)
+		}
+		return
 	}
 
-	responseStr := fmt.Sprintf("%v", string(buf))
-
-	_, err := udpServer.WriteTo([]byte("hello from server, first"), addr)
+	var player games.PlayerJson
+	err := json.Unmarshal(buf, &player)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 
-	_, err = udpServer.WriteTo([]byte("hello from server, second"), addr)
+	if isPlayerPresent(Players, player) == true {
+		updatePlayerData(Players, player)
+
+		err := sendAllPlayersToClient(udpServer, addr)
+		if err != nil {
+			log.Print(err)
+		}
+
+		return
+	}
+	err = sendAllPlayersToClient(udpServer, addr)
 	if err != nil {
-		fmt.Println(err)
+		log.Print(err)
 	}
 
-	fmt.Println("server: " + responseStr)
+	Players = append(Players, player)
+}
+
+func updatePlayerData(players []games.PlayerJson, player games.PlayerJson) {
+	for i, e := range players {
+		if e.Id == player.Id {
+			players[i].X = player.X
+			players[i].Y = player.Y
+		}
+	}
+}
+
+func isPlayerPresent(players []games.PlayerJson, player games.PlayerJson) bool {
+	for _, e := range players {
+		if e.Id == player.Id {
+			return true
+		}
+	}
+
+	return false
+}
+
+func sendAllPlayersToClient(udpServer net.PacketConn, addr net.Addr) error {
+	playersJson, err := json.Marshal(Players)
+	if err != nil {
+		return err
+	}
+
+	_, err = udpServer.WriteTo(playersJson, addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
