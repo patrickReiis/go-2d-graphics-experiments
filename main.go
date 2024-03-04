@@ -24,14 +24,14 @@ func main() {
 
 	if *client == true {
 		fmt.Println("Running a new client")
-		go multiplayer.EstablishConn(playerId)
-		select {}
+		multiplayer.EstablishConn(playerId)
+		return
 	}
 
 	if *server == true {
 		fmt.Println("Server listening...")
-		go multiplayer.ListenForConnections()
-		select {}
+		multiplayer.ListenForConnections()
+		return
 	}
 
 	fmt.Println("You need to specify either a 'server' or 'client' flag.")
