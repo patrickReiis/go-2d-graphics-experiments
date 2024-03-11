@@ -1,6 +1,7 @@
 package games
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -12,7 +13,7 @@ import (
 
 const (
 	FPS        = 60
-	MAX_FRAMES = 15
+	MAX_FRAMES = 10
 )
 
 type Power struct {
@@ -38,6 +39,12 @@ type Animation struct {
 	framesSpeed  int
 }
 
+type PlayerJson struct {
+	Id int
+	X  int
+	Y  int
+}
+
 func PlayerWalkingWithAnimation(conn *net.UDPConn, playerId int) {
 
 	screenWidth := int32(1500)
@@ -55,99 +62,130 @@ func PlayerWalkingWithAnimation(conn *net.UDPConn, playerId int) {
 
 	scarfy := rl.LoadTexture(animationFile)
 
-	id := fmt.Sprintf("id%v", playerId)
-	conn.Write([]byte(id))
-
 	player := Player{}
-	player.frameRect = rl.Rectangle{X: 0, Y: 0, Width: float32(scarfy.Width/6) * 2, Height: float32(scarfy.Height) * 2}
+	player.frameRect = rl.Rectangle{X: 0, Y: 0, Width: float32(scarfy.Width / 6), Height: float32(scarfy.Height)}
+
+	otherPlayers := Player{}
+	otherPlayers.frameRect = rl.Rectangle{X: 0, Y: 0, Width: float32(scarfy.Width / 6), Height: float32(scarfy.Height)}
 
 	players = append(players, player)
 
 	currentFrame := 0
 	frameCounter := 0
 
+	playerJson := PlayerJson{Id: playerId, X: int(player.Position.X), Y: int(player.Position.Y)}
+	playerJsoned, err := json.Marshal(playerJson)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	conn.Write(playerJsoned)
+
+	playersFromServer := []PlayerJson{}
+
 	received := make([]byte, 1024)
-	ch := make(chan string)
 	go func() {
-		_, err := conn.Read(received)
-		if err != nil {
-			log.Fatal("error reading, cliet game loop")
+		for {
+
+			n, err := conn.Read(received)
+			if err != nil {
+				log.Print(err)
+				break
+			}
+			playersFromServer = []PlayerJson{}
+			err = json.Unmarshal(received[:n], &playersFromServer)
+			if err != nil {
+				fmt.Println("CASE, trying to unmarshal", string(received))
+				log.Fatal(err)
+			}
 		}
-		ch <- string(received)
+
 	}()
 
 	rl.SetTargetFPS(FPS)
 	for rl.WindowShouldClose() == false {
-
-		// Handle received data
-		select {
-		case receivedData := <-ch:
-			fmt.Println("i am client game loop, you got", receivedData)
-
-		default:
-			//		fmt.Println("inside game loop:", string(received))
-
-			if rl.IsKeyDown(rl.KeyRight) {
-				for i := range players {
-					player := &players[i]
-					player.Position.X += float32(1 + (i))
-				}
-				conn.Write([]byte("moving right..."))
-				frameCounter++
-			}
-
-			if rl.IsKeyDown(rl.KeyLeft) {
-				for i := range players {
-					player := &players[i]
-					player.Position.X -= float32(5 + (i))
-				}
-				conn.Write([]byte("moving left..."))
-				frameCounter++
-			}
-
-			if rl.IsKeyDown(rl.KeyDown) {
-				for i := range players {
-					player := &players[i]
-					player.Position.Y += float32(5 + (i * 2))
-				}
-				conn.Write([]byte("moving down..."))
-			}
-
-			if rl.IsKeyDown(rl.KeyUp) {
-				for i := range players {
-					player := &players[i]
-					player.Position.Y -= float32(5 + (i * 2))
-				}
-				conn.Write([]byte("moving up..."))
-			}
-
-			if rl.IsKeyDown(rl.KeyLeft) == false && rl.IsKeyDown(rl.KeyRight) == false {
-				frameCounter = 0
-			}
-
-			if frameCounter > FPS/MAX_FRAMES {
-				currentFrame++
-				frameCounter = 0
-				if currentFrame > 5 {
-					currentFrame = 0
-				}
-				for i := range players {
-					player := &players[i]
-					player.frameRect.X = player.frameRect.Width * float32(currentFrame)
-				}
-			}
-
-			rl.BeginDrawing()
-			rl.ClearBackground(rl.RayWhite)
-
-			for _, player := range players {
-				//rl.DrawTexturePro(scarfy, player.frameRect, rl.Rectangle{Width: secondRect.Width, Height: secondRect.Height, X: player.Position.X, Y: player.Position.Y}, rl.Vector2{}, 0, rl.White)
-				rl.DrawTextureRec(scarfy, player.frameRect, player.Position, rl.White)
-				fmt.Println(player.Position)
-			}
-
-			rl.EndDrawing()
+		_, err := conn.Write([]byte("[]"))
+		if err != nil {
+			log.Print(err)
+			break
 		}
+
+		if rl.IsKeyDown(rl.KeyRight) {
+
+			frameCounter++
+			player.Position.X += 5
+
+			playerJson := PlayerJson{Id: playerId, X: int(player.Position.X), Y: int(player.Position.Y)}
+			playerJsoned, err := json.Marshal(playerJson)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			conn.Write(playerJsoned)
+		}
+
+		if rl.IsKeyDown(rl.KeyLeft) {
+			frameCounter++
+			player.Position.X -= 5
+
+			playerJson := PlayerJson{Id: playerId, X: int(player.Position.X), Y: int(player.Position.Y)}
+			playerJsoned, err := json.Marshal(playerJson)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			conn.Write(playerJsoned)
+		}
+
+		if rl.IsKeyDown(rl.KeyDown) {
+			player.Position.Y += 5
+			playerJson := PlayerJson{Id: playerId, X: int(player.Position.X), Y: int(player.Position.Y)}
+			playerJsoned, err := json.Marshal(playerJson)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			conn.Write(playerJsoned)
+		}
+
+		if rl.IsKeyDown(rl.KeyUp) {
+			player.Position.Y -= 5
+			playerJson := PlayerJson{Id: playerId, X: int(player.Position.X), Y: int(player.Position.Y)}
+			playerJsoned, err := json.Marshal(playerJson)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			conn.Write(playerJsoned)
+		}
+
+		if rl.IsKeyDown(rl.KeyLeft) == false && rl.IsKeyDown(rl.KeyRight) == false {
+			frameCounter = 0
+			currentFrame = 0
+			player.frameRect.X = float32(currentFrame)
+		}
+
+		if frameCounter > FPS/MAX_FRAMES {
+			currentFrame++
+			frameCounter = 0
+			if currentFrame > 5 {
+				currentFrame = 0
+			}
+			player.frameRect.X = player.frameRect.Width * float32(currentFrame)
+		}
+
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.RayWhite)
+
+		for _, p := range playersFromServer {
+			if p.Id == playerId {
+				rl.DrawTextureRec(scarfy, player.frameRect, rl.Vector2{X: float32(p.X), Y: float32(p.Y)}, rl.White)
+			} else {
+				rl.DrawTextureRec(scarfy, otherPlayers.frameRect, rl.Vector2{X: float32(p.X), Y: float32(p.Y)}, rl.White)
+			}
+		}
+		rl.EndDrawing()
 	}
 
 	rl.UnloadTexture(scarfy)
